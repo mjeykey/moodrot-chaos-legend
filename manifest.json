@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Moodrot Chaos Legend",
-  "version": "1.4",
-  "description": "Shared comment ecosystem with chaos legend reactions.",
+  "name": "Moodrot",
+  "version": "1.5.2",
+  "description": "Custom visual reaction overlays for social media communities.",
   "permissions": [
     "storage"
   ],

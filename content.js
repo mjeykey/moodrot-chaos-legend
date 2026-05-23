@@ -2,29 +2,63 @@
 const STORAGE_KEY = "COMMENT_ECOSYSTEM_EXTENSION_V1";
 
 const ICONS = {
+  rose:"🌹",
+  kiss:"💋",
+  hug:"🧸",
+  like:"👍",
+  duuh:"🙄",
+  why:"🤨",
   poop:"💩",
   flower:"🌸",
   fire:"🔥",
   clown:"🤡",
   crown:"👑",
+  wth:"😵‍💫",
+  hell:"👹",
+  girl:"💅",
   legend:"🏆",
   bro:"🗿",
-  girl:"💅",
-  wth:"😵‍💫",
-  hell:"👹"
+  thug:"😎"
+};
+
+const LABELS = {
+  rose:"ROSE",
+  kiss:"MUAH",
+  hug:"HUGGZZZ",
+  like:"MAG ICH",
+  duuh:"DUUUH",
+  why:"WHY?!",
+  poop:"LOSER",
+  flower:"ANGEL",
+  fire:"HOT",
+  clown:"CLOWN",
+  crown:"KING",
+  wth:"WTH",
+  hell:"HELL",
+  girl:"GIIIIRL",
+  legend:"LEGEND",
+  bro:"BROOOO",
+  thug:"THUG"
 };
 
 const EFFECTS = {
+  rose:"🌹",
+  kiss:"💖",
+  hug:"💞",
+  like:"💙",
+  duuh:"🙄",
+  why:"❓",
   poop:"🪰",
   flower:"🦋",
   fire:"✨",
   clown:"🎉",
   crown:"⭐",
+  wth:"⁉️",
+  hell:"🔥",
+  girl:"💖",
   legend:"⚡",
   bro:"💪",
-  girl:"💖",
-  wth:"⁉️",
-  hell:"🔥"
+  thug:"🔥"
 };
 
 let ecosystem = {};
@@ -77,11 +111,11 @@ function topReaction(data){
 
 function effectCount(type,count){
   if(type === "poop"){
-    if(count >= 500) return 5;
-    if(count >= 300) return 4;
-    if(count >= 180) return 3;
-    if(count >= 90) return 2;
-    if(count >= 35) return 1;
+    if(count >= 200) return 5;
+    if(count >= 150) return 4;
+    if(count >= 100) return 3;
+    if(count >= 50) return 2;
+    if(count >= 20) return 1;
   }
 
   if(type === "flower"){
@@ -91,18 +125,11 @@ function effectCount(type,count){
     if(count >= 20) return 1;
   }
 
-  if(type === "fire" || type === "clown" || type === "crown"){
+  if(type === "fire" || type === "clown" || type === "crown" || type === "wth" || type === "hell" || type === "girl" || type === "legend" || type === "bro" || type === "thug" || type === "rose" || type === "kiss" || type === "hug" || type === "like" || type === "duuh" || type === "why"){
     if(count >= 150) return 5;
     if(count >= 80) return 4;
     if(count >= 40) return 3;
     if(count >= 15) return 1;
-  }
-
-  if(type === "legend" || type === "bro" || type === "girl" || type === "wth" || type === "hell"){
-    if(count >= 250) return 6;
-    if(count >= 120) return 5;
-    if(count >= 60) return 3;
-    if(count >= 20) return 1;
   }
 
   return 0;
@@ -135,8 +162,8 @@ function showMenu(comment,key){
 
       ecosystem[key][id] = (ecosystem[key][id] || 0) + 1;
 
-      render(comment,key);
       saveData();
+      render(comment,key);
     };
 
     menu.appendChild(btn);
@@ -178,21 +205,14 @@ function render(comment,key){
     stage.classList.add("glow");
   }
 
-  const labels = {
-    legend: "LEGEND",
-    bro: "BROOOO",
-    girl: "GIIIIRL",
-    wth: "WTH",
-    hell: "HELL"
-  };
-
   stage.classList.add("type-" + top.type);
 
   stage.innerHTML = `
+    <div class="fx-space"></div>
     <div class="ground"></div>
     <div class="main ${sizeClass(top.count)}">${ICONS[top.type]}</div>
+    <div class="comic-label">${LABELS[top.type] || ""}</div>
     <div class="count">${top.count}</div>
-    <div class="special-label">${labels[top.type] || ""}</div>
     <div class="side"></div>
   `;
 
@@ -206,23 +226,6 @@ function render(comment,key){
     s.textContent = ICONS[id] + " " + count;
     side.appendChild(s);
   });
-
-  if(top.type === "poop" && top.count >= 50){
-    const dog = document.createElement("div");
-    dog.className = "eco-dog-event";
-
-    const variant = top.count >= 300 ? "super" : (top.count >= 150 ? "strong" : "normal");
-    dog.classList.add("dog-" + variant);
-
-    dog.innerHTML = `
-      <span class="dog-body">🐕</span>
-      <span class="dog-pee">💦</span>
-      <span class="dog-drop">💩</span>
-      <span class="dog-fly fly-one">🪰</span>
-      <span class="dog-fly fly-two">🪰</span>
-    `;
-    stage.appendChild(dog);
-  }
 
   const totalEffects = effectCount(top.type, top.count);
 
@@ -238,6 +241,18 @@ function render(comment,key){
       const items = ["⭐","✨","💫","👑"];
       fx.textContent = items[i % items.length];
     }
+    else if(top.type === "wth"){
+      const items = ["⁉️","😵‍💫","💥","❓"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "hell"){
+      const items = ["🔥","👹","💀","🌋"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "girl"){
+      const items = ["💖","💅","✨","👑"];
+      fx.textContent = items[i % items.length];
+    }
     else if(top.type === "legend"){
       const items = ["⚡","🏆","👑","✨"];
       fx.textContent = items[i % items.length];
@@ -246,16 +261,32 @@ function render(comment,key){
       const items = ["💪","🗿","🔥","⚡"];
       fx.textContent = items[i % items.length];
     }
-    else if(top.type === "girl"){
-      const items = ["💖","💅","✨","👑"];
+    else if(top.type === "thug"){
+      const items = ["🔥","😎","💥","⚡"];
       fx.textContent = items[i % items.length];
     }
-    else if(top.type === "wth"){
-      const items = ["⁉️","😵‍💫","💥","❓"];
+    else if(top.type === "rose"){
+      const items = ["🌹","🌹","🌺","🌸","🍃"];
       fx.textContent = items[i % items.length];
     }
-    else if(top.type === "hell"){
-      const items = ["🔥","👹","💀","🌋"];
+    else if(top.type === "kiss"){
+      const items = ["💖","💋","💕","✨"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "hug"){
+      const items = ["💞","🧸","💕","✨"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "like"){
+      const items = ["💙","👍","✨","💫"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "duuh"){
+      const items = ["🙄","💨","😑","⚡"];
+      fx.textContent = items[i % items.length];
+    }
+    else if(top.type === "why"){
+      const items = ["❓","🤨","⁉️","💭"];
       fx.textContent = items[i % items.length];
     }
     else{
@@ -278,7 +309,24 @@ function render(comment,key){
     showMenu(comment,key);
   };
 
-  comment.appendChild(stage);
+  
+  if(top.type === "kiss"){
+    try{
+      const a = new Audio("https://actions.google.com/sounds/v1/cartoon/kiss.ogg");
+      a.volume = 0.15;
+      a.play().catch(()=>{});
+    }catch(e){}
+  }
+
+  if(top.type === "hug"){
+    try{
+      const a = new Audio("https://actions.google.com/sounds/v1/human_voices/hmmm.ogg");
+      a.volume = 0.12;
+      a.play().catch(()=>{});
+    }catch(e){}
+  }
+
+comment.appendChild(stage);
 }
 
 function scan(){
@@ -294,7 +342,12 @@ function scan(){
     comment.style.position = "relative";
     comment.style.overflow = "visible";
 
-    render(comment,key);
+    if(ecosystem[key]){
+      render(comment,key);
+    }
+    else{
+      addPicker(comment,key);
+    }
   });
 }
 
