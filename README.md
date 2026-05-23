@@ -63,19 +63,3 @@ Steps:
 7. Select the extracted Moodrot folder
 
 Firebase powers the shared reaction system 💙
-
-Android Installation
-
-Google Chrome mobile does NOT support extensions.
-
-Use:
-
-* Kiwi Browser
-* Yandex Browser
-
-Then open:
-chrome://extensions
-
-and load the extension.
-
-Firebase powers the shared reaction system 💙
