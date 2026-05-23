@@ -16,7 +16,7 @@ Supported:
 * Edge (PC)
 * Kiwi Browser (Android)
 
-PC Installation
+PC Installation (Chrome)
 
 1. Download ZIP from Releases
 2. Extract ZIP
@@ -39,6 +39,15 @@ Select:
 moodrot-chaos-legend
 
 Do NOT select the ZIP file directly.
+
+Microsoft Edge Installation
+
+1. Open:
+   edge://extensions
+2. Enable Developer Mode
+3. Click:
+   Load unpacked
+4. Select the extracted Moodrot folder
 
 Android Installation
 
@@ -63,3 +72,4 @@ Steps:
 7. Select the extracted Moodrot folder
 
 Firebase powers the shared reaction system 💙
+
