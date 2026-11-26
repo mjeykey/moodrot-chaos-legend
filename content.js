@@ -81,27 +81,115 @@ function toggleReaction(key, id) {
   if (!Object.keys(data).length) delete ecosystem[key];
 }
 
+let soundContext;
+let activeUtterance;
+
+function playEffect(kind, button) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    button.title = "Audio playback unavailable";
+    return;
+  }
+  try {
+    if (!soundContext || soundContext.state === "closed") soundContext = new AudioContextClass();
+    const ctx = soundContext;
+    const ready = ctx.state === "running" ? Promise.resolve() : ctx.resume();
+    ready.then(() => {
+      const t = ctx.currentTime;
+      const output = ctx.createGain();
+      output.gain.value = 0.28;
+      output.connect(ctx.destination);
+      const note = (offset, duration, from, to, volume, wave = "sine") => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const at = t + offset;
+        osc.type = wave;
+        osc.frequency.setValueAtTime(from, at);
+        osc.frequency.exponentialRampToValueAtTime(to, at + duration);
+        gain.gain.setValueAtTime(0.001, at);
+        gain.gain.exponentialRampToValueAtTime(volume, at + Math.min(0.025, duration / 3));
+        gain.gain.exponentialRampToValueAtTime(0.001, at + duration);
+        osc.connect(gain).connect(output);
+        osc.start(at);
+        osc.stop(at + duration);
+      };
+      if (kind === "kiss") {
+        // Short filtered lip-smack with a descending voiced "mwah".
+        const length = Math.ceil(ctx.sampleRate * 0.16);
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const samples = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+          const x = i / length;
+          samples[i] = (Math.random() * 2 - 1) * Math.pow(1 - x, 3) * Math.min(1, x * 35);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1350;
+        filter.Q.value = 0.9;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.9;
+        src.connect(filter).connect(gain).connect(output);
+        src.start(t + 0.10);
+        note(0, 0.23, 220, 125, 0.32, "triangle");
+        note(0.08, 0.14, 620, 280, 0.12);
+      } else if (kind === "hug") {
+        note(0, 0.46, 180, 148, 0.35, "triangle");
+        note(0.10, 0.36, 270, 222, 0.16);
+        note(0.25, 0.32, 360, 296, 0.10);
+      } else {
+        note(0, 0.10, 440, 550, 0.2);
+        note(0.12, 0.18, 660, 440, 0.2);
+      }
+      // Release the master node after all scheduled sound sources end.
+      setTimeout(() => output.disconnect(), 800);
+    }).catch(() => { button.title = "Sound playback failed"; });
+  } catch (error) {
+    button.title = "Sound playback failed";
+  }
+}
+
 function playSoundBomb(text, lang, button) {
   const synth = window.speechSynthesis;
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
-    button.title = "Speech playback unavailable";
+    button.title = "Speech unavailable; playing a short tone instead";
+    playEffect("fallback", button);
     return;
   }
-  const voice = synth.getVoices().find(v => v.localService && v.lang === lang)
-    || synth.getVoices().find(v => v.localService && v.lang.split("-")[0] === lang.split("-")[0]);
-  if (!voice) {
-    button.title = "No local voice available for " + lang;
-    button.textContent = "🔇 " + text;
-    return;
+  try {
+    const voices = synth.getVoices();
+    const matches = v => v.lang.toLowerCase().split("-")[0] === lang.toLowerCase().split("-")[0];
+    const voice = voices.find(v => v.localService && v.lang.toLowerCase() === lang.toLowerCase())
+      || voices.find(v => v.localService && matches(v))
+      || voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
+      || voices.find(matches);
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    activeUtterance = utterance;
+    if (voice) utterance.voice = voice;
+    utterance.lang = lang;
+    utterance.rate = 1.08;
+    utterance.volume = 0.65;
+    utterance.onend = () => { if (activeUtterance === utterance) activeUtterance = null; };
+    utterance.onerror = event => {
+      if (activeUtterance === utterance) activeUtterance = null;
+      if (event.error === "canceled" || event.error === "interrupted") return;
+      button.title = "Speech failed; click again to play a short tone instead";
+      button.dataset.soundFallback = "true";
+    };
+    if (button.dataset.soundFallback === "true") {
+      playEffect("fallback", button);
+      delete button.dataset.soundFallback;
+      activeUtterance = null;
+      return;
+    }
+    synth.speak(utterance);
+    button.title = "Play " + text;
+  } catch (error) {
+    button.title = "Speech unavailable; playing a short tone instead";
+    playEffect("fallback", button);
   }
-  synth.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = voice;
-  utterance.lang = lang;
-  utterance.rate = 1.08;
-  utterance.volume = 0.65;
-  utterance.onerror = () => { button.title = "Sound playback failed"; };
-  synth.speak(utterance);
 }
 
 function loadData(cb){
@@ -215,6 +303,19 @@ function showMenu(comment,key){
   const heading = document.createElement("div");
   heading.textContent = "🔊 Sound Bombs";
   sounds.appendChild(heading);
+  [["💋", "MUAH – Kiss", "kiss"], ["🧸", "HUGGZZZ – Hug", "hug"]].forEach(([icon, text, kind]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "eco-sound-btn";
+    button.textContent = icon + " " + text;
+    button.title = "Play " + text;
+    button.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      playEffect(kind, button);
+    };
+    sounds.appendChild(button);
+  });
   SOUND_BOMBS.forEach(([icon, text, lang]) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -370,23 +471,7 @@ function render(comment,key){
   };
 
   
-  if(top.type === "kiss"){
-    try{
-      const a = new Audio("https://actions.google.com/sounds/v1/cartoon/kiss.ogg");
-      a.volume = 0.15;
-      a.play().catch(()=>{});
-    }catch(e){}
-  }
-
-  if(top.type === "hug"){
-    try{
-      const a = new Audio("https://actions.google.com/sounds/v1/human_voices/hmmm.ogg");
-      a.volume = 0.12;
-      a.play().catch(()=>{});
-    }catch(e){}
-  }
-
-comment.appendChild(stage);
+  comment.appendChild(stage);
 }
 
 function scan(){
