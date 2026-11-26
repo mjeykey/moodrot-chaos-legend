@@ -370,6 +370,22 @@ function render(comment,key){
   };
 
   
+  if(top.type === "kiss"){
+    try{
+      const a = new Audio("https://actions.google.com/sounds/v1/cartoon/kiss.ogg");
+      a.volume = 0.15;
+      a.play().catch(()=>{});
+    }catch(e){}
+  }
+
+  if(top.type === "hug"){
+    try{
+      const a = new Audio("https://actions.google.com/sounds/v1/human_voices/hmmm.ogg");
+      a.volume = 0.12;
+      a.play().catch(()=>{});
+    }catch(e){}
+  }
+
 comment.appendChild(stage);
 }
 
