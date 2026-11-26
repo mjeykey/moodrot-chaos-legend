@@ -63,6 +63,47 @@ const EFFECTS = {
 
 let ecosystem = {};
 
+const SOUND_BOMBS = [
+  ["🙄", "Eyyy, laber ned!", "de-DE"],
+  ["🤨", "Dein Ernst jetzt?", "de-DE"],
+  ["😂", "Ich kann nicht mehr!", "de-DE"],
+  ["💅", "Girl, please!", "en-US"],
+  ["👑", "Slay!", "en-US"],
+  ["🤫", "Pssst. Einfach leise.", "de-DE"],
+  ["😵‍💫", "What the hell?", "en-US"],
+  ["😏", "Nice try, honey.", "en-US"]
+];
+
+function toggleReaction(key, id) {
+  const data = ecosystem[key] || (ecosystem[key] = {});
+  if (data[id] > 0) delete data[id];
+  else data[id] = 1;
+  if (!Object.keys(data).length) delete ecosystem[key];
+}
+
+function playSoundBomb(text, lang, button) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
+    button.title = "Speech playback unavailable";
+    return;
+  }
+  const voice = synth.getVoices().find(v => v.localService && v.lang === lang)
+    || synth.getVoices().find(v => v.localService && v.lang.split("-")[0] === lang.split("-")[0]);
+  if (!voice) {
+    button.title = "No local voice available for " + lang;
+    button.textContent = "🔇 " + text;
+    return;
+  }
+  synth.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = voice;
+  utterance.lang = lang;
+  utterance.rate = 1.08;
+  utterance.volume = 0.65;
+  utterance.onerror = () => { button.title = "Sound playback failed"; };
+  synth.speak(utterance);
+}
+
 function loadData(cb){
   chrome.storage.local.get([STORAGE_KEY], result => {
     ecosystem = result[STORAGE_KEY] || {};
@@ -151,16 +192,16 @@ function showMenu(comment,key){
   Object.entries(ICONS).forEach(([id,icon]) => {
     const btn = document.createElement("button");
     btn.className = "eco-btn";
+    btn.type = "button";
     btn.textContent = icon;
+    const active = (ecosystem[key]?.[id] || 0) > 0;
+    btn.setAttribute("aria-pressed", String(active));
+    btn.title = (active ? "Remove " : "Add ") + LABELS[id];
 
     btn.onclick = e => {
       e.stopPropagation();
 
-      if(!ecosystem[key]){
-        ecosystem[key] = {};
-      }
-
-      ecosystem[key][id] = (ecosystem[key][id] || 0) + 1;
+      toggleReaction(key, id);
 
       saveData();
       render(comment,key);
@@ -169,6 +210,24 @@ function showMenu(comment,key){
     menu.appendChild(btn);
   });
 
+  const sounds = document.createElement("div");
+  sounds.className = "eco-sounds";
+  const heading = document.createElement("div");
+  heading.textContent = "🔊 Sound Bombs";
+  sounds.appendChild(heading);
+  SOUND_BOMBS.forEach(([icon, text, lang]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "eco-sound-btn";
+    button.textContent = icon + " " + text;
+    button.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      playSoundBomb(text, lang, button);
+    };
+    sounds.appendChild(button);
+  });
+  menu.appendChild(sounds);
   comment.appendChild(menu);
 }
 
@@ -177,6 +236,7 @@ function addPicker(comment,key){
 
   const picker = document.createElement("button");
   picker.className = "eco-picker";
+  picker.type = "button";
   picker.textContent = "✨";
 
   picker.onclick = e => {
@@ -310,22 +370,6 @@ function render(comment,key){
   };
 
   
-  if(top.type === "kiss"){
-    try{
-      const a = new Audio("https://actions.google.com/sounds/v1/cartoon/kiss.ogg");
-      a.volume = 0.15;
-      a.play().catch(()=>{});
-    }catch(e){}
-  }
-
-  if(top.type === "hug"){
-    try{
-      const a = new Audio("https://actions.google.com/sounds/v1/human_voices/hmmm.ogg");
-      a.volume = 0.12;
-      a.play().catch(()=>{});
-    }catch(e){}
-  }
-
 comment.appendChild(stage);
 }
 
