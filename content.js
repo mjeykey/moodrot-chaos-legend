@@ -192,6 +192,24 @@ function playSoundBomb(text, lang, button) {
   }
 }
 
+let activePersonalSource, personalPlayId=0;
+async function playPersonalSound(data,button){
+ const id=++personalPlayId;
+ try{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)throw Error("Audio unavailable");
+  if(!soundContext||soundContext.state==="closed")soundContext=new AudioContextClass();
+  const ctx=soundContext;
+  if(activePersonalSource){try{activePersonalSource.stop()}catch{}activePersonalSource=null}
+  if(ctx.state!=="running")await ctx.resume();
+  if(typeof data!=="string"||!data.startsWith("data:audio/")||!data.includes(";base64,")||data.length>360000)throw Error("Invalid recording");
+  const raw=atob(data.slice(data.indexOf(",")+1)),bytes=Uint8Array.from(raw,ch=>ch.charCodeAt(0));
+  const buffer=await ctx.decodeAudioData(bytes.buffer);
+  if(id!==personalPlayId)return;
+  const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;gain.gain.value=.8;source.connect(gain).connect(ctx.destination);activePersonalSource=source;
+  source.onended=()=>{source.disconnect();gain.disconnect();if(activePersonalSource===source)activePersonalSource=null};source.start();
+ }catch{button.title="Recording could not be played"}
+}
 function loadData(cb){
   chrome.storage.local.get([STORAGE_KEY], result => {
     ecosystem = result[STORAGE_KEY] || {};
@@ -328,7 +346,30 @@ function showMenu(comment,key){
     };
     sounds.appendChild(button);
   });
+  const recordButton=document.createElement("button");
+  recordButton.type="button";recordButton.className="eco-sound-btn";
+  recordButton.textContent="🎙️ Record your own";
+  recordButton.onclick=async e=>{
+    e.preventDefault();e.stopPropagation();
+    try{const result=await chrome.runtime.sendMessage({type:"MOODROT_OPEN_RECORDER"});if(!result?.ok)throw Error("Recorder unavailable")}
+    catch{recordButton.textContent="🎙️ Reload and try again"}
+  };
+  sounds.appendChild(recordButton);
+  const personal=document.createElement("div");personal.style.display="contents";sounds.appendChild(personal);
+  const renderPersonal=async()=>{
+    try{
+      const data=await chrome.storage.local.get("MOODROT_CUSTOM_SOUNDS_V1");
+      if(!menu.isConnected)return;
+      personal.replaceChildren();
+      for(const sound of (Array.isArray(data.MOODROT_CUSTOM_SOUNDS_V1)?data.MOODROT_CUSTOM_SOUNDS_V1:[])){
+        const button=document.createElement("button");button.type="button";button.className="eco-sound-btn";button.textContent="▶ "+sound.name;
+        button.onclick=e=>{e.preventDefault();e.stopPropagation();playPersonalSound(sound.data,button)};
+        personal.appendChild(button);
+      }
+    }catch{recordButton.title="Could not load personal sounds"}
+  };
   menu.appendChild(sounds);
+  queueMicrotask(renderPersonal);
   comment.appendChild(menu);
 }
 
